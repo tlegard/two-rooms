@@ -10,7 +10,7 @@ git clone https://github.com/isaacsinuhe/create-react-app-ts-express-basic.git
 
 ## After cloning
 
-As create-react-app --scripts-version=react-scripts-ts uses yarn you must install it to run this repository.
+As create-react-app --scripts-version=react-scripts-ts uses yarn you must install it to run this repository.<br>
 When you have already cloned this repository you must run `yarn install` to install all of the dependencies.
 
 ## Folder Structure
@@ -68,10 +68,12 @@ Runs the app in the development mode.<br>
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 Transpiles the server and runs it<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-Client calls are automatically proxied to [http://localhost:8000](http://localhost:8000)
-If you need to add more routes do it using express routes.
-If you need to change the configuration of the proxy do it in the package.json file changing the property "proxy": "http://localhost:8000" to "proxy": "http://localhost:8000/foo" or whatever your requirements are.
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.<br>
+Client calls are automatically proxied to [http://localhost:8000](http://localhost:8000)<br>
+If you need to add more routes do it using express routes.<br>
+If you need to change the configuration of the proxy do it in the package.json file<br>
+changing the property "proxy": "http://localhost:8000" to "proxy": "http://localhost:8000/foo"<br>
+or whatever your requirements are.
 
 ### `yarn run build`
 
