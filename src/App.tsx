@@ -6,7 +6,7 @@ const logo = require('./logo.svg');
 
 class App extends React.Component {
   render() {
-    axios.get('/test/a')
+    axios.get('/test')
       .then( (res) => {
         console.log(res.data)
       })

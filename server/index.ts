@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: false }))
 app.use(morgan('dev'))
 
 app.all('/*', (req, res, next) => {
-    console.log('aaaaaaaaaaaaaaaaaaaa');
+    console.log('Reading the main route through http request, sending index.html');
     res.sendFile(path.join(__dirname, '..', 'build', 'index.html'))
 })
 
