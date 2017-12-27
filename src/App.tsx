@@ -1,10 +1,15 @@
 import * as React from 'react';
+import { default as axios } from 'axios'
 import './App.css';
 
 const logo = require('./logo.svg');
 
 class App extends React.Component {
   render() {
+    axios.get('/test/a')
+      .then( (res) => {
+        console.log(res.data)
+      })
     return (
       <div className="App">
         <div className="App-header">
