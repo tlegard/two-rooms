@@ -8,6 +8,11 @@ You can clone this project by just typing in your terminal:
 
 git clone https://github.com/isaacsinuhe/create-react-app-ts-express-basic.git
 
+## After cloning
+
+As create-react-app --scripts-version=react-scripts-ts uses yarn you must install it to run this repository.
+When you have already cloned this repository you must run `yarn install` to install all of the dependencies.
+
 ## Folder Structure
 
 After creation, your project should look like this:
@@ -44,7 +49,7 @@ my-app/
 
 In the project directory, you can run:
 
-### `npm start`
+### `yarn start`
 
 Runs the app in the development mode.<br>
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
@@ -52,12 +57,12 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 The page will reload if you make edits.<br>
 You will also see any lint errors in the console.
 
-### `npm test`
+### `yarn test`
 
 Launches the test runner in the interactive watch mode.<br>
 See the section about [running tests](#running-tests) for more information.
 
-### `npm run dev`
+### `yarn run dev`
 
 Runs the app in the development mode.<br>
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
@@ -68,7 +73,7 @@ Client calls are automatically proxied to [http://localhost:8000](http://localho
 If you need to add more routes do it using express routes.
 If you need to change the configuration of the proxy do it in the package.json file changing the property "proxy": "http://localhost:8000" to "proxy": "http://localhost:8000/foo" or whatever your requirements are.
 
-### `npm run build`
+### `yarn run build`
 
 Builds the app for production to the `build` folder.<br>
 Builds the app server code for production to the `dist` folder.<br>
@@ -80,7 +85,7 @@ Your app is ready to be deployed!
 
 See the section about [deployment](#deployment) for more information.
 
-### `npm run eject`
+### `yarn run eject`
 
 **Note: this is a one-way operation. Once you `eject`, you can’t go back!**
 
