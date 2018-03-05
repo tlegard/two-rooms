@@ -1,0 +1,19 @@
+{
+  "name": "two-rooms",
+  "version": "0.1.0",
+  "description": "Web Socket app for playing two rooms and a boom",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tlegard/two-rooms.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tlegard/two-rooms/issues"
+  },
+  "homepage": "https://github.com/tlegard/two-rooms#readme"
+}
