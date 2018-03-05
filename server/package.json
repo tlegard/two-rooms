@@ -1,0 +1,30 @@
+{
+  "name": "two-rooms-server",
+  "version": "0.1.0",
+  "description": "A server for two rooms and a boom",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --watch 'src/**/*.ts' --exec ts-node src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tlegard/two-rooms.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tlegard/two-rooms/issues"
+  },
+  "homepage": "https://github.com/tlegard/two-rooms#readme",
+  "dependencies": {
+    "colyseus": "^0.8.13",
+    "express": "^4.16.2"
+  },
+  "devDependencies": {
+    "@types/node": "^9.4.6",
+    "nodemon": "^1.17.1",
+    "ts-node": "^5.0.1",
+    "typescript": "^2.7.2"
+  }
+}
