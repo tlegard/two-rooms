@@ -1,6 +1,6 @@
 {
   "name": "two-rooms-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A server for two rooms and a boom",
   "main": "server/index.js",
   "scripts": {
