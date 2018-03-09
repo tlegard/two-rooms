@@ -72,10 +72,8 @@ class App extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
 
-    const protocol = window.location.protocol === "https" ? "wss" : "ws";
-    const client = new Client(
-      `${protocol}://aqueous-spire-37539.herokuapp.com`
-    );
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const client = new Client(`${protocol}//aqueous-spire-37539.herokuapp.com`);
     this.client = client;
 
     this.client.onError.add(() => {
