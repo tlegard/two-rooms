@@ -3,7 +3,7 @@ import * as express from "express";
 import { createServer } from "http";
 import { Server } from "colyseus";
 
-const port = Number(process.env["PORT"] || 6000);
+const port = Number(process.env["PORT"] || 7001);
 const app = express();
 
 const httpServer = createServer(app);

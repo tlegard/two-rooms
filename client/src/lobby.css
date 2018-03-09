@@ -1,0 +1,23 @@
+.lobby-room-header {
+  background-color: #1b1b1b;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+
+  height: 3rem;
+  padding: 0.5rem 1rem;
+
+  border-radius: 20px;
+  margin-bottom: 1rem;
+}
+
+dl {
+  display: flex;
+  flex-flow: column;
+}
+
+dd {
+  margin: 0;
+}
