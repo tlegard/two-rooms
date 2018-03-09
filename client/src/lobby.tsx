@@ -109,7 +109,10 @@ class LobbyRoom extends React.Component<Room, {}> {
   render() {
     const isGambler = !!(this.props.totalPlayers % 2);
     const isColorShare = this.props.totalPlayers > 10;
-    const regularTeamMembers = Math.floor(this.props.totalPlayers / 2 - 4) - 1;
+    const regularTeamMembers =
+      Math.floor(
+        this.props.totalPlayers / 2 - (this.props.gameMode === 0 ? 0 : 4)
+      ) - 1;
 
     return (
       <article>
