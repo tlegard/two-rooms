@@ -66,6 +66,10 @@ const leaveGame = (room: GameRoom): void => {
   return room.send({ type: "LEAVE" });
 };
 
+const endGame = (room: GameRoom): void => {
+  return room.send({ type: "END" });
+};
+
 class App extends React.Component<Props, State> {
   client: Client;
 
@@ -217,6 +221,7 @@ class App extends React.Component<Props, State> {
           <Round
             team={currentPlayer.team}
             role={currentPlayer.role}
+            onEndGame={event => this.state.room && endGame(this.state.room)}
             allowedToColorShare={
               this.state.gameMode === 0 ? (
                 players.filter(player => player.type === "player").length > 10

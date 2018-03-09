@@ -226,6 +226,13 @@ export class BeginnerGame extends Room<State, string> {
     ) {
       this.listenForStartUpMessages(client, data);
     }
+
+    if (this.state.gameStatus === GameStatus.Started) {
+      if (data.type === "END") {
+        this.state.gameStatus = GameStatus.Unstarted;
+        this.state.players = {};
+      }
+    }
   }
 
   listenForStartUpMessages(client: Client, data) {

@@ -30,6 +30,7 @@ type RoundProps = {
   team: "blue" | "red" | "grey";
   role: "member" | string;
   allowedToColorShare: boolean;
+  onEndGame: Function;
 };
 
 type RoundState = {
@@ -99,6 +100,7 @@ export default class Round extends React.Component<RoundProps, RoundState> {
         <figure>
           <img style={{ width: "300px" }} src={cardImage} />
         </figure>
+        <button onClick={this.props.onEndGame}>End Game</button>
       </div>
     );
   }
