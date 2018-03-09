@@ -6,16 +6,18 @@ import Round from "./round";
 
 type GameRoom = Room<{}>;
 
+type GenericRole = "member" | "spy" | "negotiator" | "coy boy";
+
 interface RedTeamPlayer {
   type: "player";
   team: "red";
-  role: "bomber" | "member";
+  role: "bomber" | "engineer" | GenericRole;
 }
 
 interface BlueTeamPlayer {
   type: "player";
   team: "blue";
-  role: "president" | "member";
+  role: "president" | "doctor" | GenericRole;
 }
 
 interface GreyTeamPlayer {
@@ -41,6 +43,7 @@ interface State {
     [key: string]: Player;
   };
   gameStatus: number;
+  gameMode: number;
   neededToStart: number;
   client?: Client;
 }
@@ -69,7 +72,7 @@ class App extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
 
-    const client = new Client("ws://192.168.73.110:7001");
+    const client = new Client("ws://192.168.213.29:7001");
     this.client = client;
 
     this.client.onError.add(() => {
@@ -91,7 +94,8 @@ class App extends React.Component<Props, State> {
     this.state = {
       players: {},
       neededToStart: NaN,
-      gameStatus: 0
+      gameStatus: 0,
+      gameMode: 0
     };
   }
 
@@ -116,6 +120,13 @@ class App extends React.Component<Props, State> {
       console.debug(change);
       if (change.operation === "add" || change.operation === "replace") {
         this.setState({ gameStatus: change.value });
+      }
+    });
+
+    room.listen("gameMode", (change: DataChange) => {
+      console.debug(change);
+      if (change.operation === "add" || change.operation === "replace") {
+        this.setState({ gameMode: change.value });
       }
     });
 
@@ -173,7 +184,10 @@ class App extends React.Component<Props, State> {
           <Lobby
             rooms={[
               {
-                displayString: "Beginner Room",
+                displayString:
+                  this.state.gameMode === 0
+                    ? "Beginner Room"
+                    : "Intermediate Room",
                 joined: !!currentPlayer,
                 totalPlayers: players.filter(
                   (player: Player) => player.type === "prospect"
@@ -182,8 +196,9 @@ class App extends React.Component<Props, State> {
                   player => player.type === "prospect" && player.wantsToStart
                 ).length,
                 neededToStart: this.state.neededToStart,
-                maxPlayers: 17,
-                minPlayers: 6,
+                maxPlayers: this.state.gameMode === 0 ? 17 : 25,
+                minPlayers: this.state.gameMode === 0 ? 6 : 11,
+                gameMode: this.state.gameMode,
                 onForceStart: event =>
                   this.state.room &&
                   (currentPlayer.wantsToStart
@@ -202,7 +217,11 @@ class App extends React.Component<Props, State> {
             team={currentPlayer.team}
             role={currentPlayer.role}
             allowedToColorShare={
-              players.filter(player => player.type === "player").length > 10
+              this.state.gameMode === 0 ? (
+                players.filter(player => player.type === "player").length > 10
+              ) : (
+                true
+              )
             }
           />
         )}
