@@ -72,7 +72,7 @@ class App extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
 
-    const client = new Client("ws://192.168.213.29:7001");
+    const client = new Client("ws://aqueous-spire-37539.herokuapp.com");
     this.client = client;
 
     this.client.onError.add(() => {
