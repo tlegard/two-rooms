@@ -1,0 +1,7 @@
+build:
+    language: nodejs
+    post:
+        - cd client && npm install && npm run build
+run:
+    web:
+        npm run start

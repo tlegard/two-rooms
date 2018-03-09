@@ -5,6 +5,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "DEBUG=colyseus:* nodemon --watch 'server/src/**/*.ts' --exec ts-node server/src/index.ts",
+    "pre:deploy": "cd client && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -21,6 +22,7 @@
     "colyseus": "^0.8.13",
     "express": "^4.16.2",
     "ramda": "^0.25.0",
+    "serve-index": "^1.9.1",
     "shuffle-array": "^1.0.1",
     "uws": "^9.14.0"
   },
