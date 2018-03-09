@@ -2,9 +2,9 @@
   "name": "two-rooms-server",
   "version": "0.1.0",
   "description": "A server for two rooms and a boom",
-  "main": "index.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "DEBUG=colyseus:* nodemon --watch 'src/**/*.ts' --exec ts-node src/index.ts",
+    "start": "DEBUG=colyseus:* nodemon --watch 'server/src/**/*.ts' --exec ts-node server/src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
