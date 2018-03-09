@@ -4,7 +4,7 @@
   "description": "A server for two rooms and a boom",
   "main": "server/index.js",
   "scripts": {
-    "pre:start": "cd client && npm install && npm run build",
+    "prestart": "cd client && npm install && npm run build",
     "start": "DEBUG=colyseus:* nodemon --watch 'server/src/**/*.ts' --exec ts-node server/src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
