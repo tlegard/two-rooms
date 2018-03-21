@@ -1,15 +1,36 @@
-import * as React from 'react';
-import { default as axios } from 'axios'
-import './App.css';
+import * as React from "react";
+import "./App.css";
 
-const logo = require('./logo.svg');
+const logo = require("./logo.svg");
 
-class App extends React.Component {
+import * as Colyseus from "colyseus.js";
+
+class App extends React.Component<{}> {
+  client: Colyseus.Client;
+
+  constructor(props: {}) {
+    super(props);
+
+    this.client = new Colyseus.Client("ws://127.0.0.1:3333");
+
+    this.client.onOpen.add(() => {
+      console.log("Opened");
+    });
+
+    this.client.onError.add(() => {
+      console.log("Error");
+    });
+
+    this.client.onClose.add(() => {
+      console.log("Closed");
+    });
+
+    this.client.join("beginner");
+  }
+
+  componentDidMount() {}
+
   render() {
-    axios.get('/test')
-      .then( (res) => {
-        console.log(res.data)
-      })
     return (
       <div className="App">
         <div className="App-header">

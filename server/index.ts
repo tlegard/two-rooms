@@ -1,22 +1,23 @@
-import * as express from 'express'
-import * as path from 'path'
-import * as morgan from 'morgan'
-import * as http from 'http'
+import * as express from "express";
+import * as morgan from "morgan";
 
-const app = express()
-app.set('port', 8000)
+import { GameRoom } from "./game";
+import { createServer } from "http";
+import { Server } from "colyseus";
 
-app.use(express.static(path.join(__dirname, '..', 'build', 'static')))
-app.use(express.json())
-app.use(express.urlencoded({ extended: false }))
-app.use(morgan('dev'))
+const app = express();
+app.use(morgan("dev"));
 
-app.all('/*', (req, res, next) => {
-    console.log('Reading the main route through http request, sending index.html');
-    res.sendFile(path.join(__dirname, '..', 'build', 'index.html'))
-})
+const port = Number(process.env["PORT"] || 8000);
 
-const server = http.createServer(app)
-server.listen(app.get('port'), () => {
-    console.log('express listening on port ' + app.get('port'))
-})
+const httpServer = createServer(app);
+const gameServer = new Server({ server: httpServer });
+
+gameServer.register("beginner", GameRoom);
+
+//app.use(express.static(path.join(__dirname, "../build")));
+//app.use("/", serveIndex(path.join(__dirname, "../../client"), { icons: true }));
+
+gameServer.listen(port);
+
+console.log(`Listening on http://localhost:${port}`);
