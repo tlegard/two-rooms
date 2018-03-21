@@ -17,12 +17,14 @@
     "react-scripts-ts": "2.8.0",
     "redis": "^2.8.0",
     "serve-index": "^1.9.1",
+    "ts-node": "^5.0.1",
     "tslint": "^5.9.1",
     "tslint-react": "^3.5.1",
     "uws": "^9.14.0"
   },
   "proxy": "http://localhost:8000",
   "scripts": {
+    "server": "DEBUG=colyseus:* nodemon --watch 'server/**/*.ts' --exec ts-node server/index.ts",
     "start": "react-scripts-ts start",
     "build": "concurrently \"react-scripts-ts build\" \"tsc -p server\"",
     "dev": "tsc -p server && node dist/index.js",

@@ -11,7 +11,7 @@ class App extends React.Component<{}> {
   constructor(props: {}) {
     super(props);
 
-    this.client = new Colyseus.Client("ws://127.0.0.1:3333");
+    this.client = new Colyseus.Client("ws://127.0.0.1:8000");
 
     this.client.onOpen.add(() => {
       console.log("Opened");
