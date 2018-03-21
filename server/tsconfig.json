@@ -5,7 +5,8 @@
     "target": "es5",
     "lib": ["es2015", "es2017", "es7"],
     "experimentalDecorators": true,
-    "strict": true
+    "strict": true,
+    "rootDirs": ["src"]
   },
   "include": ["src/**/*.ts/", "../types/*.ts"]
 }

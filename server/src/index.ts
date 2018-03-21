@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as serveIndex from "serve-index";
 
-import { BeginnerGame } from "./game";
+import { GameRoom } from "./game";
 import * as express from "express";
 import { createServer } from "http";
 import { Server } from "colyseus";
@@ -13,10 +13,9 @@ const httpServer = createServer(app);
 
 const gameServer = new Server({ server: httpServer });
 
-gameServer.register("beginner", BeginnerGame);
+gameServer.register("beginner", GameRoom);
 gameServer.listen(port);
 
-console.log(path.join(__dirname, "../../client", "build"));
 app.use(express.static(path.join(__dirname, "../../client", "build")));
 app.use("/", serveIndex(path.join(__dirname, "../../client"), { icons: true }));
 

@@ -1,297 +1,414 @@
-import { Room, Client, EntityMap } from "colyseus";
-import { times, map, addIndex, mergeAll, compose } from "ramda";
-const shuffle = require("shuffle-array");
+import {
+  UnstartedMessageData,
+  AllowedToStartMessageData,
+  ActiveMessageData,
+  TransitioningMessageData,
+  EndingMessageData,
+  MessageTypes
+} from "../../types/messages";
+import { Playset } from "../../types/playset";
+import {
+  ActiveGame,
+  AllowedToStartGame,
+  EndingGame,
+  Game,
+  GameStatus,
+  InitializingGame,
+  TransitioningGame,
+  UnstartedGame
+} from "../..//types/game";
 
-enum GameMode {
-  Beginner,
-  Intermediate
-}
+import {
+  addProspectToGame,
+  removeProspectFromGame,
+  updatePropsect,
+  assignRoomToProspects,
+  assignCharacterToProspects
+} from "./helpers/prospect";
+import { TIME_TO_INITIALIZE } from "./constants/rounds";
+import {
+  getRoundDuration,
+  getNumberOfRounds,
+  getRoundHostages
+} from "./helpers/rounds";
+import { usurp, relinquish } from "./helpers/usurp";
+import { capture, release } from "./helpers/leader";
 
-const GAME_MODE: GameMode = GameMode.Beginner;
+import { Room, Client } from "colyseus";
 
-type GenericRoles = "member" | "negotiator" | "coy boy" | "spy";
+type GameOptions = {
+  playset: Playset;
+};
 
-interface RedTeamPlayer {
-  type: "player";
-  team: "red";
-  role: "bomber" | "engineer" | GenericRoles;
-}
+type GameRoomState = {
+  game: Game;
+};
 
-interface BlueTeamPlayer {
-  type: "player";
-  team: "blue";
-  role: "president" | "doctor" | GenericRoles;
-}
+const getNextRound = (game: TransitioningGame): ActiveGame => {
+  const duration = getRoundDuration(game.currentRound, game);
 
-interface GreyTeamPlayer {
-  type: "player";
-  team: "grey";
-  role: "gambler";
-}
+  // Swap those hostages!
+  const players = game.players.map(player => {
+    player.room = game.roomOne.hostages.includes(player.name)
+      ? 1
+      : game.roomTwo.hostages.includes(player.name) ? 2 : player.room;
+    return player;
+  });
 
-interface ProspectivePlayer {
-  type: "prospect";
-  wantsToStart: boolean;
-}
-
-type Player =
-  | ProspectivePlayer
-  | RedTeamPlayer
-  | BlueTeamPlayer
-  | GreyTeamPlayer;
-
-export enum GameStatus {
-  Unstarted,
-  AllowedToStart,
-  Started
-}
-
-class State {
-  players: EntityMap<Player> = {};
-  gameStatus: GameStatus = GameStatus.Unstarted;
-  neededToStart: number = GAME_MODE === GameMode.Beginner ? 4 : 6;
-  round: number = NaN;
-  hostagesNeeded: number = NaN;
-  timeRemaining: number = NaN;
-  gameMode: GameMode = GAME_MODE;
-
-  createPlayer(id: string) {
-    const numberOfPlayers = Object.keys(this.players).length;
-
-    if (GameStatus.Unstarted || GameStatus.AllowedToStart) {
-      this.players[id] = { type: "prospect", wantsToStart: false };
-
-      this.neededToStart = Math.max(
-        Math.floor((numberOfPlayers + 1) / 3 * 2),
-        this.neededToStart
-      );
+  return {
+    gameStatus: GameStatus.Active,
+    duration: duration,
+    timeElapsed: 0,
+    players: players,
+    playset: game.playset,
+    currentRound: game.currentRound + 1,
+    roomOne: {
+      hostages: [],
+      leader: game.roomOne.leader,
+      usurpVotes: {}
+    },
+    roomTwo: {
+      hostages: [],
+      leader: game.roomTwo.leader,
+      usurpVotes: {}
     }
-  }
+  };
+};
 
-  startIntermidateGame() {
-    const prospectivePlayers = Object.values(this.players).filter(
-      player => player.type === "prospect"
-    );
+const getInitialActiveGame = (game: InitializingGame): ActiveGame => {
+  const duration = getRoundDuration(1, game);
 
-    const greyTeam: GreyTeamPlayer[] =
-      prospectivePlayers.length % 2
-        ? [{ team: "grey", type: "player", role: "gambler" }]
-        : [];
+  return {
+    gameStatus: GameStatus.Active,
+    roomOne: {
+      hostages: [],
+      leader: "",
+      usurpVotes: {}
+    },
+    roomTwo: {
+      hostages: [],
+      usurpVotes: {},
+      leader: ""
+    },
+    duration: duration,
+    timeElapsed: 0,
+    currentRound: 1,
+    players: game.players,
+    playset: game.playset
+  };
+};
 
-    const equalTeamNumber = Math.floor(
-      (prospectivePlayers.length - greyTeam.length) / 2
-    );
-
-    const staticRedTeam: RedTeamPlayer[] = [
-      { team: "red", type: "player", role: "bomber" },
-      { team: "red", type: "player", role: "engineer" },
-      { team: "red", type: "player", role: "coy boy" },
-      { team: "red", type: "player", role: "spy" },
-      { team: "red", type: "player", role: "negotiator" }
-    ];
-
-    const staticBlueTeam: BlueTeamPlayer[] = [
-      { team: "blue", type: "player", role: "president" },
-      { team: "blue", type: "player", role: "doctor" },
-      { team: "blue", type: "player", role: "coy boy" },
-      { team: "blue", type: "player", role: "spy" },
-      { team: "blue", type: "player", role: "negotiator" }
-    ];
-
-    const allTeams = [
-      ...greyTeam,
-      ...staticBlueTeam,
-      ...staticRedTeam,
-      times(
-        (): BlueTeamPlayer => ({
-          team: "blue",
-          type: "player",
-          role: "member"
-        }),
-        equalTeamNumber - staticBlueTeam.length
-      ),
-      times(
-        (): RedTeamPlayer => ({
-          team: "red",
-          type: "player",
-          role: "member"
-        }),
-        equalTeamNumber - staticRedTeam.length
-      )
-    ];
-
-    const randomizedTeams: Player[] = shuffle(allTeams);
-    const mapIndex = addIndex(map);
-
-    const finalDeck = compose(
-      mergeAll,
-      mapIndex((player, index) => ({ [player]: randomizedTeams[index] }))
-    )(Object.keys(this.players));
-
-    this.players = { ...this.players, ...finalDeck };
-    this.gameStatus = GameStatus.Started;
-  }
-
-  startGame() {
-    const prospectivePlayers = Object.values(this.players).filter(
-      player => player.type === "prospect"
-    );
-
-    const greyTeam: GreyTeamPlayer[] =
-      prospectivePlayers.length % 2
-        ? [{ team: "grey", type: "player", role: "gambler" }]
-        : [];
-
-    const equalTeamNumber = Math.floor(
-      (prospectivePlayers.length - greyTeam.length) / 2
-    );
-
-    const redTeam: RedTeamPlayer[] = [
-      { team: "red", type: "player", role: "bomber" },
-      ...times(
-        (): RedTeamPlayer => ({ team: "red", type: "player", role: "member" }),
-        equalTeamNumber - 1
-      )
-    ];
-
-    const blueTeam: BlueTeamPlayer[] = [
-      { team: "blue", type: "player", role: "president" },
-      ...times(
-        (): BlueTeamPlayer => ({
-          team: "blue",
-          type: "player",
-          role: "member"
-        }),
-        equalTeamNumber - 1
-      )
-    ];
-
-    const allTeams: Player[] = [...greyTeam, ...blueTeam, ...redTeam];
-
-    const randomizedTeams: Player[] = shuffle(allTeams);
-    const mapIndex = addIndex(map);
-
-    const finalDeck = compose(
-      mergeAll,
-      mapIndex((player, index) => ({ [player]: randomizedTeams[index] }))
-    )(Object.keys(this.players));
-
-    this.players = { ...this.players, ...finalDeck };
-    this.gameStatus = GameStatus.Started;
-  }
-
-  removePlayer(id: string) {
-    delete this.players[id];
-    const numberOfPlayers = Object.keys(this.players).length;
-
-    if (GameStatus.Unstarted || GameStatus.AllowedToStart) {
-      this.neededToStart = Math.max(
-        Math.floor(numberOfPlayers / 3 * 2),
-        GAME_MODE === GameMode.Beginner ? 4 : 6
-      );
+const getEndingGame = (game: ActiveGame): EndingGame => {
+  return {
+    playset: game.playset,
+    gameStatus: GameStatus.Ending
+  };
+};
+const getTransitioningGame = (game: ActiveGame): TransitioningGame => {
+  return {
+    gameStatus: GameStatus.Transitioning,
+    playset: game.playset,
+    currentRound: game.currentRound,
+    players: game.players,
+    roomOne: {
+      hostages: game.roomOne.hostages,
+      leader: game.roomOne.leader!,
+      exchanged: false
+    },
+    roomTwo: {
+      hostages: game.roomTwo.hostages,
+      leader: game.roomTwo.leader!,
+      exchanged: false
     }
+  };
+};
+
+export class GameRoom extends Room<GameRoomState> {
+  initialGame: UnstartedGame;
+
+  onInit(options: GameOptions) {
+    this.initialGame = {
+      playset: options.playset,
+      neededToStart: 0,
+      prospects: [],
+      gameStatus: GameStatus.Unstarted
+    };
+
+    this.setState({
+      game: this.initialGame
+    });
+
+    console.log("Inited");
   }
 
-  allowForceStart() {
-    if (this.gameStatus === GameStatus.Unstarted) {
-      this.gameStatus = GameStatus.AllowedToStart;
+  public transitionToAfter<
+    NewState extends ActiveGame | TransitioningGame | EndingGame,
+    OldGame extends ActiveGame | InitializingGame
+  >(
+    oldStatus: GameStatus.Initializing | GameStatus.Active,
+    getNewState: (oldState: OldGame) => NewState,
+    after: number,
+    callback?: (newState: NewState) => void
+  ): void {
+    this.clock.start();
+    this.clock.setInterval(() => {
+      let game = this.state.game;
+      const { elapsedTime } = this.clock;
+
+      if (game.gameStatus === oldStatus) {
+        const theGame = game as OldGame;
+        const duration = theGame.duration;
+
+        if (elapsedTime > duration) {
+          const newGame = getNewState(theGame);
+
+          this.setState({ game: newGame });
+          this.clock.stop();
+          this.clock.clear();
+
+          if (callback) {
+            callback(newGame);
+          }
+        }
+      } else {
+        this.clock.stop();
+        this.clock.clear();
+      }
+    }, after);
+  }
+
+  requestJoin(): boolean {
+    console.log("Client requested to join");
+    return true;
+  }
+  onUnstartedMessage(
+    client: Client,
+    data: UnstartedMessageData,
+    game: UnstartedGame | AllowedToStartGame
+  ): UnstartedGame | AllowedToStartGame {
+    switch (data.type) {
+      case MessageTypes.Join:
+        if (game.prospects.length < game.playset.maxPlayers) {
+          game = addProspectToGame(client.id, game);
+        }
+        break;
+      case MessageTypes.Leave:
+        game = removeProspectFromGame(client.id, game);
+        break;
     }
-  }
 
-  disallowForceStart() {
-    if (this.gameStatus === GameStatus.AllowedToStart) {
-      this.gameStatus = GameStatus.Unstarted;
+    const { prospects } = game;
+
+    game = { ...game, neededToStart: Math.floor(2 / 3 * prospects.length) };
+
+    if (prospects.length < game.playset.minPlayers) {
+      return { ...game, gameStatus: GameStatus.Unstarted };
     }
-  }
-}
 
-export class BeginnerGame extends Room<State, string> {
-  maxPlayers = GAME_MODE === GameMode.Beginner ? 17 : 25;
-  minPlayers = GAME_MODE === GameMode.Beginner ? 6 : 11;
-
-  onInit() {
-    console.log("BeginnerGame Created");
-
-    this.setState(new State());
+    return assignCharacterToProspects(
+      assignRoomToProspects({ ...game, gameStatus: GameStatus.AllowedToStart })
+    );
   }
 
-  onJoin(client: Client) {}
+  onAllowedToStartMessage(
+    client: Client,
+    data: AllowedToStartMessageData,
+    game: AllowedToStartGame
+  ): AllowedToStartGame | UnstartedGame | InitializingGame {
+    switch (data.type) {
+      case MessageTypes.Join:
+      case MessageTypes.Leave:
+        return this.onUnstartedMessage(
+          client,
+          data as UnstartedMessageData,
+          game
+        );
+      case MessageTypes.ForceStart:
+        game = updatePropsect(client.id, { wantsToStart: true }, game);
+      case MessageTypes.UnforceStart:
+        game = updatePropsect(client.id, { wantsToStart: false }, game);
+    }
 
-  onLeave(client: Client) {}
-
-  onMessage(client: Client, data) {
     if (
-      this.state.gameStatus === GameStatus.Unstarted ||
-      this.state.gameStatus === GameStatus.AllowedToStart
+      game.prospects.filter(player => player.wantsToStart).length >
+      game.neededToStart
     ) {
-      this.listenForStartUpMessages(client, data);
+      this.transitionToAfter(
+        GameStatus.Initializing,
+        getInitialActiveGame,
+        TIME_TO_INITIALIZE,
+        newGame => {
+          this.transitionToAfter(
+            GameStatus.Active,
+            getTransitioningGame,
+            newGame.duration
+          );
+        }
+      );
+
+      return {
+        gameStatus: GameStatus.Initializing,
+        currentRound: 0,
+        players: game.prospects,
+        duration: TIME_TO_INITIALIZE,
+        timeElapsed: 0,
+        playset: game.playset
+      };
     }
 
-    if (this.state.gameStatus === GameStatus.Started) {
-      if (data.type === "END") {
-        this.state.gameStatus = GameStatus.Unstarted;
-        this.state.players = {};
-      }
-    }
+    return game;
   }
 
-  listenForStartUpMessages(client: Client, data) {
-    const numberOfPlayers = Object.keys(this.state.players).length;
+  onActiveMessage(
+    client: Client,
+    data: ActiveMessageData,
+    game: ActiveGame
+  ): ActiveGame | UnstartedGame {
+    const player = game.players.find(player => player.name === client.id);
+    if (player) {
+      const room = player.room === 1 ? "roomOne" : "roomTwo";
 
-    if (data.type === "JOIN" && numberOfPlayers < this.maxPlayers) {
-      this.state.createPlayer(client.id);
-
-      if (numberOfPlayers + 1 >= this.minPlayers) {
-        this.state.allowForceStart();
-      }
-    }
-
-    if (data.type === "LEAVE") {
-      this.state.removePlayer(client.id);
-
-      if (
-        numberOfPlayers - 1 < this.minPlayers &&
-        this.state.gameStatus === GameStatus.AllowedToStart
-      ) {
-        this.state.disallowForceStart();
-        console.log("Problem");
-      }
-    }
-
-    if (data.type === "FORCE_START") {
-      const player = this.state.players[client.id];
-
-      if (player && this.state.gameStatus === GameStatus.AllowedToStart) {
-        this.state.players[client.id] = {
-          wantsToStart: true,
-          type: "prospect"
-        };
-
-        if (
-          Object.values(this.state.players).filter(
-            player => player.type === "prospect" && player.wantsToStart
-          ).length >= this.state.neededToStart
-        ) {
-          this.state.gameMode === GameMode.Beginner
-            ? this.state.startGame()
-            : this.state.startIntermidateGame();
+      if (player.name == game[room].leader) {
+        // Leaders can capture and release hostages
+        switch (data.type) {
+          case MessageTypes.Capture:
+            game = capture(room, data.player, game);
+            break;
+          case MessageTypes.Release:
+            game = release(room, data.player, game);
+            break;
+          case MessageTypes.End:
+            return this.initialGame;
+        }
+      } else {
+        // Non leaders can vote to usurp.
+        switch (data.type) {
+          case MessageTypes.Usurp:
+            game = usurp(room, client.id, data.player, game);
+          case MessageTypes.Relinquish:
+            game = relinquish(room, client.id, game);
         }
       }
     }
 
-    if (data.type === "UNFORCE_START") {
-      const player = this.state.players[client.id];
-
-      if (player && this.state.gameStatus === GameStatus.AllowedToStart) {
-        this.state.players[client.id] = {
-          wantsToStart: false,
-          type: "prospect"
-        };
-      }
-    }
+    return game;
   }
 
-  onDispose() {
-    console.log("Dispoing BeginnerGame");
+  onTransitioningMessage(
+    client: Client,
+    data: TransitioningMessageData,
+    game: TransitioningGame
+  ): TransitioningGame | ActiveGame | UnstartedGame {
+    const player = game.players.find(player => player.name === client.id);
+    if (player) {
+      const room = player.room === 1 ? "roomOne" : "roomTwo";
+
+      if (player.name === game[room].leader) {
+        // Leaders can still capture, release and exchange their hostages
+        switch (data.type) {
+          case MessageTypes.Capture:
+            game = capture(room, data.player, game);
+            break;
+          case MessageTypes.Release:
+            game = release(room, data.player, game);
+            break;
+          case MessageTypes.Exchange:
+            game = { ...game, [room]: { ...game[room], exchanged: true } };
+
+            const numHostages = getRoundHostages(game.currentRound, game);
+
+            if (
+              game.roomOne.exchanged &&
+              game.roomOne.hostages.length === numHostages &&
+              game.roomTwo.exchanged &&
+              game.roomTwo.hostages.length === numHostages
+            ) {
+              const activeGame = getNextRound(game);
+
+              if (game.currentRound < getNumberOfRounds(game)) {
+                this.transitionToAfter(
+                  GameStatus.Active,
+                  getTransitioningGame,
+                  activeGame.duration
+                );
+              } else {
+                this.transitionToAfter(
+                  GameStatus.Active,
+                  getEndingGame,
+                  activeGame.duration
+                );
+              }
+
+              return activeGame;
+            }
+            break;
+          case MessageTypes.End:
+            return this.initialGame;
+        }
+      }
+    }
+
+    return game;
+  }
+
+  onEndingMessage(
+    client: Client,
+    data: EndingMessageData,
+    game: EndingGame
+  ): EndingGame | UnstartedGame {
+    switch (data.type) {
+      case MessageTypes.End:
+        return this.initialGame;
+      case MessageTypes.GamblerBet:
+        game = { ...game, gamblerVote: data.vote };
+        break;
+    }
+    return game;
+  }
+
+  onMessage(client: Client, data: any) {
+    const game = this.state.game;
+
+    if (game.gameStatus === GameStatus.Unstarted) {
+      this.setState({
+        game: this.onUnstartedMessage(client, data, game as UnstartedGame)
+      });
+    }
+
+    if (game.gameStatus === GameStatus.AllowedToStart) {
+      this.setState({
+        game: this.onAllowedToStartMessage(
+          client,
+          data,
+          game as AllowedToStartGame
+        )
+      });
+    }
+
+    if (game.gameStatus === GameStatus.Initializing) {
+      // Not really doing anything while initializing;
+    }
+
+    if (game.gameStatus === GameStatus.Active) {
+      this.setState({
+        game: this.onActiveMessage(client, data, game as ActiveGame)
+      });
+    }
+
+    if (game.gameStatus === GameStatus.Transitioning) {
+      this.setState({
+        game: this.onTransitioningMessage(
+          client,
+          data,
+          game as TransitioningGame
+        )
+      });
+    }
+
+    if (game.gameStatus === GameStatus.Ending) {
+      this.setState({
+        game: this.onEndingMessage(client, data, game as EndingGame)
+      });
+    }
   }
 }
