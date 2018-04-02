@@ -1,6 +1,6 @@
 import { Player, ProspectivePlayer } from "./player";
 import { Playset } from "./playset";
-
+import { ActiveBoomRoom, TradingBoomRoom } from "./boom-room";
 export enum GameStatus {
   Unstarted,
   AllowedToStart,
@@ -47,37 +47,21 @@ export interface InitializingGame extends TimedGame {
 
 export interface ActiveGame extends TimedGame {
   gameStatus: GameStatus.Active;
-  roomOne: {
-    leader?: string;
-    usurpVotes: {
-      [player: string]: string;
-    };
-    hostages: string[];
-  };
-  roomTwo: {
-    leader?: string;
-    usurpVotes: {
-      [player: string]: string;
-    };
-    hostages: string[];
-  };
+  totalRounds: number;
+  roomOne: ActiveBoomRoom;
+  roomTwo: ActiveBoomRoom;
+  hostagesNeeded: number;
 }
 
 export interface TransitioningGame extends StartedGame {
   gameStatus: GameStatus.Transitioning;
-  roomOne: {
-    hostages: string[];
-    exchanged: boolean;
-    leader: string;
-  };
-  roomTwo: {
-    hostages: string[];
-    exchanged: boolean;
-    leader: string;
-  };
+  roomOne: TradingBoomRoom;
+  totalRounds: number;
+  roomTwo: TradingBoomRoom;
+  hostagesNeeded: number;
 }
 
-export interface EndingGame extends Game {
+export interface EndingGame extends StartedGame {
   gameStatus: GameStatus.Ending;
   gamblerVote?: "red" | "blue";
   presidentCured?: boolean;

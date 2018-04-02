@@ -32,3 +32,18 @@ button:focus {
   margin: 0;
   padding: 0 1rem;
 }
+
+form {
+  background-color: #1b1b1b;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+
+  height: 3rem;
+  padding: 0.5rem 1rem;
+
+  border-radius: 20px;
+  margin-bottom: 1rem;
+}

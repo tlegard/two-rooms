@@ -6,6 +6,8 @@ import * as express from "express";
 import { createServer } from "http";
 import { Server } from "colyseus";
 
+import BeginnerPlayset from "./playset/beginner";
+
 const port = Number(process.env["PORT"] || 7001);
 const app = express();
 
@@ -13,7 +15,9 @@ const httpServer = createServer(app);
 
 const gameServer = new Server({ server: httpServer });
 
-gameServer.register("beginner", GameRoom);
+gameServer.register("beginner", GameRoom, {
+  playset: BeginnerPlayset
+});
 gameServer.listen(port);
 
 app.use(express.static(path.join(__dirname, "../../client", "build")));

@@ -32,7 +32,7 @@ import {
   getRoundHostages
 } from "./helpers/rounds";
 import { usurp, relinquish } from "./helpers/usurp";
-import { capture, release } from "./helpers/leader";
+import { capture, release, abdicate, swapHostages } from "./helpers/leader";
 
 import { Room, Client } from "colyseus";
 
@@ -45,13 +45,13 @@ type GameRoomState = {
 };
 
 const getNextRound = (game: TransitioningGame): ActiveGame => {
-  const duration = getRoundDuration(game.currentRound, game);
+  const duration = getRoundDuration(game.currentRound + 1, game);
 
   // Swap those hostages!
   const players = game.players.map(player => {
-    player.room = game.roomOne.hostages.includes(player.name)
+    player.room = game.roomOne.hostages.includes(player.id)
       ? 1
-      : game.roomTwo.hostages.includes(player.name) ? 2 : player.room;
+      : game.roomTwo.hostages.includes(player.id) ? 2 : player.room;
     return player;
   });
 
@@ -62,6 +62,8 @@ const getNextRound = (game: TransitioningGame): ActiveGame => {
     players: players,
     playset: game.playset,
     currentRound: game.currentRound + 1,
+    totalRounds: getNumberOfRounds(game),
+    hostagesNeeded: getRoundHostages(game.currentRound + 1, game),
     roomOne: {
       hostages: [],
       leader: game.roomOne.leader,
@@ -90,9 +92,11 @@ const getInitialActiveGame = (game: InitializingGame): ActiveGame => {
       usurpVotes: {},
       leader: ""
     },
+    hostagesNeeded: getRoundHostages(1, game),
     duration: duration,
     timeElapsed: 0,
     currentRound: 1,
+    totalRounds: getNumberOfRounds(game),
     players: game.players,
     playset: game.playset
   };
@@ -101,15 +105,20 @@ const getInitialActiveGame = (game: InitializingGame): ActiveGame => {
 const getEndingGame = (game: ActiveGame): EndingGame => {
   return {
     playset: game.playset,
+    players: game.players,
+    currentRound: 0,
     gameStatus: GameStatus.Ending
   };
 };
+
 const getTransitioningGame = (game: ActiveGame): TransitioningGame => {
   return {
     gameStatus: GameStatus.Transitioning,
     playset: game.playset,
     currentRound: game.currentRound,
     players: game.players,
+    hostagesNeeded: getRoundHostages(game.currentRound, game),
+    totalRounds: getNumberOfRounds(game),
     roomOne: {
       hostages: game.roomOne.hostages,
       leader: game.roomOne.leader!,
@@ -137,8 +146,6 @@ export class GameRoom extends Room<GameRoomState> {
     this.setState({
       game: this.initialGame
     });
-
-    console.log("Inited");
   }
 
   public transitionToAfter<
@@ -151,45 +158,34 @@ export class GameRoom extends Room<GameRoomState> {
     callback?: (newState: NewState) => void
   ): void {
     this.clock.start();
-    this.clock.setInterval(() => {
+    const timeout = setTimeout(() => {
       let game = this.state.game;
-      const { elapsedTime } = this.clock;
 
       if (game.gameStatus === oldStatus) {
         const theGame = game as OldGame;
         const duration = theGame.duration;
 
-        if (elapsedTime > duration) {
-          const newGame = getNewState(theGame);
+        const newGame = getNewState(theGame);
 
-          this.setState({ game: newGame });
-          this.clock.stop();
-          this.clock.clear();
+        this.state = { game: newGame };
 
-          if (callback) {
-            callback(newGame);
-          }
+        if (callback) {
+          callback(newGame);
         }
-      } else {
-        this.clock.stop();
-        this.clock.clear();
       }
     }, after);
   }
 
-  requestJoin(): boolean {
-    console.log("Client requested to join");
-    return true;
-  }
   onUnstartedMessage(
     client: Client,
     data: UnstartedMessageData,
     game: UnstartedGame | AllowedToStartGame
   ): UnstartedGame | AllowedToStartGame {
+    console.log(data.type);
     switch (data.type) {
       case MessageTypes.Join:
         if (game.prospects.length < game.playset.maxPlayers) {
-          game = addProspectToGame(client.id, game);
+          game = addProspectToGame(client.id, data.name, game);
         }
         break;
       case MessageTypes.Leave:
@@ -200,7 +196,6 @@ export class GameRoom extends Room<GameRoomState> {
     const { prospects } = game;
 
     game = { ...game, neededToStart: Math.floor(2 / 3 * prospects.length) };
-
     if (prospects.length < game.playset.minPlayers) {
       return { ...game, gameStatus: GameStatus.Unstarted };
     }
@@ -225,12 +220,14 @@ export class GameRoom extends Room<GameRoomState> {
         );
       case MessageTypes.ForceStart:
         game = updatePropsect(client.id, { wantsToStart: true }, game);
+        break;
       case MessageTypes.UnforceStart:
         game = updatePropsect(client.id, { wantsToStart: false }, game);
+        break;
     }
 
     if (
-      game.prospects.filter(player => player.wantsToStart).length >
+      game.prospects.filter(player => player.wantsToStart).length >=
       game.neededToStart
     ) {
       this.transitionToAfter(
@@ -264,11 +261,11 @@ export class GameRoom extends Room<GameRoomState> {
     data: ActiveMessageData,
     game: ActiveGame
   ): ActiveGame | UnstartedGame {
-    const player = game.players.find(player => player.name === client.id);
+    const player = game.players.find(player => player.id === client.id);
     if (player) {
       const room = player.room === 1 ? "roomOne" : "roomTwo";
 
-      if (player.name == game[room].leader) {
+      if (player.id === game[room].leader) {
         // Leaders can capture and release hostages
         switch (data.type) {
           case MessageTypes.Capture:
@@ -279,14 +276,21 @@ export class GameRoom extends Room<GameRoomState> {
             break;
           case MessageTypes.End:
             return this.initialGame;
+          case MessageTypes.Abdicate:
+            game = abdicate(room, data.player, game);
+            break;
         }
       } else {
         // Non leaders can vote to usurp.
         switch (data.type) {
           case MessageTypes.Usurp:
             game = usurp(room, client.id, data.player, game);
+            console.log(game);
+            console.log(data.player);
+            break;
           case MessageTypes.Relinquish:
             game = relinquish(room, client.id, game);
+            break;
         }
       }
     }
@@ -299,14 +303,15 @@ export class GameRoom extends Room<GameRoomState> {
     data: TransitioningMessageData,
     game: TransitioningGame
   ): TransitioningGame | ActiveGame | UnstartedGame {
-    const player = game.players.find(player => player.name === client.id);
+    const player = game.players.find(player => player.id === client.id);
     if (player) {
       const room = player.room === 1 ? "roomOne" : "roomTwo";
 
-      if (player.name === game[room].leader) {
+      if (player.id === game[room].leader) {
         // Leaders can still capture, release and exchange their hostages
         switch (data.type) {
           case MessageTypes.Capture:
+            console.log("Caputing");
             game = capture(room, data.player, game);
             break;
           case MessageTypes.Release:
@@ -323,7 +328,10 @@ export class GameRoom extends Room<GameRoomState> {
               game.roomTwo.exchanged &&
               game.roomTwo.hostages.length === numHostages
             ) {
-              const activeGame = getNextRound(game);
+              console.log(game.players);
+              const swapped = swapHostages(game);
+              console.log(swapped.players);
+              const activeGame = getNextRound(swapped);
 
               if (game.currentRound < getNumberOfRounds(game)) {
                 this.transitionToAfter(
@@ -370,19 +378,19 @@ export class GameRoom extends Room<GameRoomState> {
     const game = this.state.game;
 
     if (game.gameStatus === GameStatus.Unstarted) {
-      this.setState({
-        game: this.onUnstartedMessage(client, data, game as UnstartedGame)
-      });
+      this.state.game = this.onUnstartedMessage(
+        client,
+        data,
+        game as UnstartedGame
+      );
     }
 
     if (game.gameStatus === GameStatus.AllowedToStart) {
-      this.setState({
-        game: this.onAllowedToStartMessage(
-          client,
-          data,
-          game as AllowedToStartGame
-        )
-      });
+      this.state.game = this.onAllowedToStartMessage(
+        client,
+        data,
+        game as AllowedToStartGame
+      );
     }
 
     if (game.gameStatus === GameStatus.Initializing) {
@@ -390,25 +398,19 @@ export class GameRoom extends Room<GameRoomState> {
     }
 
     if (game.gameStatus === GameStatus.Active) {
-      this.setState({
-        game: this.onActiveMessage(client, data, game as ActiveGame)
-      });
+      this.state.game = this.onActiveMessage(client, data, game as ActiveGame);
     }
 
     if (game.gameStatus === GameStatus.Transitioning) {
-      this.setState({
-        game: this.onTransitioningMessage(
-          client,
-          data,
-          game as TransitioningGame
-        )
-      });
+      this.state.game = this.onTransitioningMessage(
+        client,
+        data,
+        game as TransitioningGame
+      );
     }
 
     if (game.gameStatus === GameStatus.Ending) {
-      this.setState({
-        game: this.onEndingMessage(client, data, game as EndingGame)
-      });
+      this.state.game = this.onEndingMessage(client, data, game as EndingGame);
     }
   }
 }

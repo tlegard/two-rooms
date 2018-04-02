@@ -18,6 +18,17 @@ export const usurp = (
     }
   } as ActiveGame;
 
+  if (!room.leader) {
+    return {
+      ...game,
+      [roomName]: {
+        ...room,
+        leader: vote,
+        usurpVotes: {}
+      }
+    };
+  }
+
   const playersInRoom = game.players.filter(
     player => player.room === (roomName === "roomOne" ? 1 : 2)
   );
@@ -25,19 +36,19 @@ export const usurp = (
   const { winner } = playersInRoom.reduce(
     (winner, player) => {
       const numberOfVotes = Object.values(room.usurpVotes).filter(
-        vote => vote === player.name
+        vote => vote === player.id
       ).length;
 
       if (numberOfVotes > winner.votes) {
         return {
-          winner: player.name,
+          winner: player.id,
           votes: numberOfVotes
         };
       } else {
         return winner;
       }
     },
-    { winner: "", votes: -1 }
+    { winner: room.leader, votes: Math.floor(playersInRoom.length / 2) }
   );
 
   if (winner !== room.leader) {
@@ -45,7 +56,8 @@ export const usurp = (
       ...game,
       [roomName]: {
         ...room,
-        leader: winner
+        leader: winner,
+        usurpVotes: {}
       }
     };
   }

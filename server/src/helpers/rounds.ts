@@ -3,10 +3,9 @@ import { StartedGame } from "../../../types/game";
 const MINUTE = 60 * 1000;
 
 export const getRoundDuration = (round: number, game: StartedGame): number => {
-  return game.players.length <= 10
-    ? (3 - round + 1) * MINUTE
-    : (5 - round + 1) * MINUTE;
+  return game.players.length <= 10 ? 1 * 5000 : (5 - round + 1) * MINUTE;
 };
+
 export const getRoundHostages = (round: number, game: StartedGame): number => {
   const numberOfPlayers = game.players.length;
   const currentRound = game.currentRound;

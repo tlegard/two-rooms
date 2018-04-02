@@ -13,11 +13,45 @@
   margin-bottom: 1rem;
 }
 
-dl {
+.teams {
   display: flex;
-  flex-flow: column;
+  justify-content: space-between;
 }
 
-dd {
+article > * + * {
+  margin-bottom: 1em;
+}
+
+.team {
+  margin: 0 0.5rem;
+  padding: 0.5rem;
+  flex-grow: 1;
+}
+
+.team ul,
+.team dd {
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.team li {
+  line-height: 1.25rem;
+}
+
+.team.blue {
+  background-color: #324896;
+}
+
+.team.red {
+  background-color: #ed1d24;
+}
+
+.team-header {
+  font-weight: 900;
+  margin-bottom: 0.25rem;
+}
+
+.team.grey {
+  background-color: #6d6f6f;
 }

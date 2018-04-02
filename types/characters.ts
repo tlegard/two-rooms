@@ -6,6 +6,7 @@ export type GreyRoles = "gambler";
 
 export interface Character {
   numberNeeded?: "even" | "odd" | number;
+  zIndex: number;
 }
 
 export interface RedCharacter extends Character {

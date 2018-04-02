@@ -4,16 +4,19 @@ const BeginnerPlayset: Playset = {
   characters: [
     {
       team: "red",
-      role: "bomber"
+      role: "bomber",
+      zIndex: 100
     },
     {
       team: "blue",
-      role: "doctor"
+      role: "president",
+      zIndex: 100
     },
     {
       team: "grey",
       role: "gambler",
-      numberNeeded: "odd"
+      numberNeeded: "odd",
+      zIndex: 100
     }
   ],
   fillWithMembers: true,

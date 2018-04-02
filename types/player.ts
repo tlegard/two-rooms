@@ -7,13 +7,14 @@ import {
 import { Conditions } from "./conditions";
 
 export interface Player {
+  character: AllCharacters;
+  id: string;
   name: string;
   room: 1 | 2;
   conditions: Conditions[];
 }
 
 export interface ProspectivePlayer extends Player {
-  character: AllCharacters;
   wantsToStart: boolean;
 }
 

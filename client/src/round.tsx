@@ -42,7 +42,7 @@ export default class Round extends React.Component<RoundProps, RoundState> {
   constructor(props: RoundProps) {
     super(props);
     this.state = {
-      showingRole: true,
+      showingRole: false,
       showingTeam: false
     };
   }

@@ -22,17 +22,21 @@ export const enoughPlayers = (
 
 export const addProspectToGame = (
   prospect: string,
+  name: string,
   game: UnstartedGame | AllowedToStartGame
 ): UnstartedGame | AllowedToStartGame => {
+  console.log(prospect);
   return {
     ...game,
     prospects: game.prospects.concat([
       {
-        name: prospect,
+        id: prospect,
+        name: name,
         wantsToStart: false,
         character: {
           team: "blue",
-          role: "president"
+          role: "president",
+          zIndex: 1
         },
         room: 1,
         conditions: []
@@ -47,7 +51,7 @@ export const removeProspectFromGame = (
 ): UnstartedGame | AllowedToStartGame => {
   return {
     ...game,
-    prospects: game.prospects.filter(player => player.name !== prospect)
+    prospects: game.prospects.filter(player => player.id !== prospect)
   };
 };
 
@@ -59,7 +63,7 @@ export const updatePropsect = (
   return {
     ...game,
     prospects: game.prospects.map(
-      player => (player.name === prospect ? { ...player, ...props } : player)
+      player => (player.id === prospect ? { ...player, ...props } : player)
     )
   };
 };
@@ -92,14 +96,16 @@ export const assignCharacterToProspects = (
       ...times(
         (): BlueCharacter => ({
           team: "blue",
-          role: "member"
+          role: "member",
+          zIndex: 1
         }),
         half
       ),
       ...times(
         (): RedCharacter => ({
           team: "red",
-          role: "member"
+          role: "member",
+          zIndex: 1
         }),
         half
       )

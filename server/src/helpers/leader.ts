@@ -51,3 +51,41 @@ export function release(
     }
   };
 }
+
+export const abdicate = (
+  room: "roomOne" | "roomTwo",
+  player: string,
+  game: ActiveGame
+): ActiveGame => {
+  return {
+    ...game,
+    [room]: {
+      ...game[room],
+      usurpVotes: {},
+      hostages: [],
+      leader: player
+    }
+  };
+};
+
+export const swapHostages = (game: TransitioningGame): TransitioningGame => {
+  return {
+    ...game,
+    players: game.players.map(player => {
+      return {
+        ...player,
+        room: game.roomOne.hostages.includes(player.id)
+          ? 2
+          : game.roomTwo.hostages.includes(player.id) ? 1 : player.room
+      };
+    }),
+    roomOne: {
+      ...game.roomOne,
+      hostages: []
+    },
+    roomTwo: {
+      ...game.roomTwo,
+      hostages: []
+    }
+  };
+};

@@ -9,20 +9,24 @@ export enum MessageTypes {
   Release = "RELEASE",
   Exchange = "EXCHANGE",
   End = "END",
+  Abdicate = "ABDICATE",
   GamblerBet = "GAMBLER_BET"
 }
 
-export type UnstartedMessageData = {
-  type: MessageTypes.Join | MessageTypes.Leave;
-};
+export type UnstartedMessageData =
+  | {
+      type: MessageTypes.Leave;
+    }
+  | {
+      type: MessageTypes.Join;
+      name: string;
+    };
 
-export type AllowedToStartMessageData = {
-  type:
-    | MessageTypes.ForceStart
-    | MessageTypes.UnforceStart
-    | MessageTypes.Join
-    | MessageTypes.Leave;
-};
+export type AllowedToStartMessageData =
+  | {
+      type: MessageTypes.ForceStart | MessageTypes.UnforceStart;
+    }
+  | UnstartedMessageData;
 
 export type ActiveMessageData =
   | {
@@ -30,7 +34,8 @@ export type ActiveMessageData =
         | MessageTypes.Usurp
         | MessageTypes.Relinquish
         | MessageTypes.Capture
-        | MessageTypes.Release;
+        | MessageTypes.Release
+        | MessageTypes.Abdicate;
       player: string;
     }
   | {
